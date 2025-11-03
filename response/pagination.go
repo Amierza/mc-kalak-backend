@@ -1,5 +1,7 @@
 package response
 
+import "gorm.io/gorm"
+
 type (
 	PaginationRequest struct {
 		Search  string `form:"search"`
@@ -25,4 +27,11 @@ func (pr *PaginationResponse) GetLimit() int {
 
 func (pr *PaginationResponse) GetPage() int {
 	return pr.Page
+}
+
+func Paginate(page, perPage int) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		offset := (page - 1) * perPage
+		return db.Offset(offset).Limit(perPage)
+	}
 }

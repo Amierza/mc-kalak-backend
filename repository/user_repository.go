@@ -8,13 +8,13 @@ type (
 	IUserRepository interface {
 	}
 
-	UserRepository struct {
+	userRepository struct {
 		db *gorm.DB
 	}
 )
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{
+func NewUserRepository(db *gorm.DB) *userRepository {
+	return &userRepository{
 		db: db,
 	}
 }

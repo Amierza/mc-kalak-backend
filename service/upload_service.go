@@ -1,0 +1,124 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/Amierza/go-boiler-plate/dto"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+)
+
+type (
+	IUploadService interface {
+		// public function
+		Upload(ctx context.Context, files []*multipart.FileHeader) ([]string, error)
+		// private / helper function
+		saveUploadedFile(file *multipart.FileHeader, savePath string) error
+		createFile(path string) (*os.File, error)
+		copyFile(dst *os.File, src multipart.File) (int64, error)
+	}
+
+	uploadService struct {
+		logger *zap.Logger
+	}
+)
+
+func NewUploadService(logger *zap.Logger) *uploadService {
+	return &uploadService{
+		logger: logger,
+	}
+}
+
+var allowedExt = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".pdf":  true,
+	".doc":  true,
+	".docx": true,
+	".xls":  true,
+	".xlsx": true,
+}
+
+// Upload bisa handle single atau multiple file
+func (us *uploadService) Upload(ctx context.Context, files []*multipart.FileHeader) ([]string, error) {
+	if len(files) == 0 {
+		us.logger.Warn("Upload attempted with no files")
+		return nil, dto.ErrNoFilesUploaded
+	}
+
+	var uploadedPaths []string
+	for _, file := range files {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if !allowedExt[ext] {
+			us.logger.Warn("Invalid file type",
+				zap.String("filename", file.Filename),
+				zap.String("extension", ext),
+			)
+			return nil, dto.ErrInvalidFileType
+		}
+
+		newFileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+		storagePath := filepath.Join("uploads", newFileName)
+
+		// Simpan file (local)
+		if err := us.saveUploadedFile(file, storagePath); err != nil {
+			us.logger.Error("Failed to save uploaded file",
+				zap.String("filename", file.Filename),
+				zap.String("path", storagePath),
+				zap.Error(err),
+			)
+			return nil, dto.ErrSaveFile
+		}
+
+		uploadedPaths = append(uploadedPaths, storagePath)
+	}
+
+	return uploadedPaths, nil
+}
+
+func (us *uploadService) saveUploadedFile(file *multipart.FileHeader, savePath string) error {
+	src, err := file.Open()
+	if err != nil {
+		us.logger.Error("Failed to open uploaded file",
+			zap.String("filename", file.Filename),
+			zap.Error(err),
+		)
+		return err
+	}
+	defer src.Close()
+
+	dst, err := us.createFile(savePath)
+	if err != nil {
+		us.logger.Error("Failed to create destination file",
+			zap.String("path", savePath),
+			zap.Error(err),
+		)
+		return err
+	}
+	defer dst.Close()
+
+	_, err = us.copyFile(dst, src)
+	if err != nil {
+		us.logger.Error("Error while copying file content",
+			zap.String("destination", savePath),
+			zap.Error(err),
+		)
+	}
+	return err
+}
+
+// ini nanti kita ganti kalau mau langsung ke S3
+func (us *uploadService) createFile(path string) (*os.File, error) {
+	return os.Create(path)
+}
+
+func (us *uploadService) copyFile(dst *os.File, src multipart.File) (int64, error) {
+	return io.Copy(dst, src)
+}

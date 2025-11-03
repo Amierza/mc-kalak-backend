@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func User(route *gin.Engine, userHandler handler.IUserHandler, jwtService jwt.IJWTService) {
+func User(route *gin.Engine, userHandler handler.IUserHandler, jwtService jwt.IJWT) {
 	routes := route.Group("/api/v1/users")
 	{
 		routes.Use()

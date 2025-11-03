@@ -8,6 +8,7 @@ import (
 	"github.com/Amierza/go-boiler-plate/config/database"
 	"github.com/Amierza/go-boiler-plate/handler"
 	"github.com/Amierza/go-boiler-plate/jwt"
+	"github.com/Amierza/go-boiler-plate/logger"
 	"github.com/Amierza/go-boiler-plate/middleware"
 	"github.com/Amierza/go-boiler-plate/repository"
 	"github.com/Amierza/go-boiler-plate/routes"
@@ -19,25 +20,43 @@ func main() {
 	db := database.SetUpPostgreSQLConnection()
 	defer database.ClosePostgreSQLConnection(db)
 
+	// Zap logger
+	zapLogger, err := logger.New()
+	if err != nil {
+		log.Fatalf("failed to init logger: %v", err)
+	}
+	defer zapLogger.Sync() // flush buffer
+
 	if len(os.Args) > 1 {
 		cmd.Command(db)
 		return
 	}
 
 	var (
-		jwtService = jwt.NewJWTService()
+		// jwt
+		jwt = jwt.NewJWT()
 
+		// External API
+		// externalGateway = gateway.NewExternalGateway(os.Getenv("API_EXTERNAL"), zapLogger)
+
+		// Resource
+		// Upload
+		uploadService = service.NewUploadService(zapLogger)
+		uploadHandler = handler.NewUploadHandler(uploadService, zapLogger)
+
+		// User
 		userRepo    = repository.NewUserRepository(db)
-		userService = service.NewUserService(userRepo, jwtService)
-		userHandler = handler.NewUserHandler(userService)
+		userService = service.NewUserService(userRepo, jwt, zapLogger)
+		userHandler = handler.NewUserHandler(userService, zapLogger)
 	)
 
 	server := gin.Default()
 	server.Use(middleware.CORSMiddleware())
 
-	routes.User(server, userHandler, jwtService)
+	routes.Upload(server, uploadHandler, jwt)
+	routes.User(server, userHandler, jwt)
 
-	server.Static("/assets", "./assets")
+	server.Static("/uploads", "./uploads")
 
 	port := os.Getenv("PORT")
 	if port == "" {
