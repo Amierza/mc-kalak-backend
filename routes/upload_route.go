@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"github.com/Amierza/go-boiler-plate/handler"
-	"github.com/Amierza/go-boiler-plate/jwt"
-	"github.com/Amierza/go-boiler-plate/middleware"
+	"github.com/Amierza/mc-kalak-backend/handler"
+	"github.com/Amierza/mc-kalak-backend/jwt"
+	"github.com/Amierza/mc-kalak-backend/middleware"
 	"github.com/gin-gonic/gin"
 )
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Amierza/go-boiler-plate/dto"
+	"github.com/Amierza/mc-kalak-backend/dto"
 )
 
 func mapErrorStatus(err error) int {

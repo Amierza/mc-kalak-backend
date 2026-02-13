@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Amierza/go-boiler-plate/dto"
-	"github.com/Amierza/go-boiler-plate/jwt"
-	"github.com/Amierza/go-boiler-plate/response"
+	"github.com/Amierza/mc-kalak-backend/dto"
+	"github.com/Amierza/mc-kalak-backend/jwt"
+	"github.com/Amierza/mc-kalak-backend/response"
 	"github.com/gin-gonic/gin"
 )
 
