@@ -17,7 +17,7 @@ import (
 type (
 	IUploadService interface {
 		// public function
-		Upload(ctx context.Context, files []*multipart.FileHeader) ([]string, error)
+		Upload(ctx context.Context, file *multipart.FileHeader) (string, error)
 		// private / helper function
 		saveUploadedFile(file *multipart.FileHeader, savePath string) error
 		createFile(path string) (*os.File, error)
@@ -29,58 +29,49 @@ type (
 	}
 )
 
-func NewUploadService(logger *zap.Logger) *uploadService {
-	return &uploadService{
-		logger: logger,
-	}
+func NewUploadService() *uploadService {
+	return &uploadService{}
 }
 
 var allowedExt = map[string]bool{
 	".jpg":  true,
 	".jpeg": true,
 	".png":  true,
-	".pdf":  true,
-	".doc":  true,
-	".docx": true,
-	".xls":  true,
-	".xlsx": true,
+	// ".pdf":  true,
+	// ".doc":  true,
+	// ".docx": true,
+	// ".xls":  true,
+	// ".xlsx": true,
 }
 
-// Upload bisa handle single atau multiple file
-func (us *uploadService) Upload(ctx context.Context, files []*multipart.FileHeader) ([]string, error) {
-	if len(files) == 0 {
-		us.logger.Warn("Upload attempted with no files")
-		return nil, dto.ErrNoFilesUploaded
+func (us *uploadService) Upload(ctx context.Context, file *multipart.FileHeader) (string, error) {
+	if file == nil {
+		us.logger.Warn("Upload attempted with no file")
+		return "", dto.ErrNoFilesUploaded
 	}
 
-	var uploadedPaths []string
-	for _, file := range files {
-		ext := strings.ToLower(filepath.Ext(file.Filename))
-		if !allowedExt[ext] {
-			us.logger.Warn("Invalid file type",
-				zap.String("filename", file.Filename),
-				zap.String("extension", ext),
-			)
-			return nil, dto.ErrInvalidFileType
-		}
-
-		newFileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
-		storagePath := filepath.Join("uploads", newFileName)
-
-		// Simpan file (local)
-		if err := us.saveUploadedFile(file, storagePath); err != nil {
-			us.logger.Error("Failed to save uploaded file",
-				zap.String("filename", file.Filename),
-				zap.String("path", storagePath),
-				zap.Error(err),
-			)
-			return nil, dto.ErrSaveFile
-		}
-
-		uploadedPaths = append(uploadedPaths, storagePath)
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if !allowedExt[ext] {
+		us.logger.Warn("Invalid file type",
+			zap.String("filename", file.Filename),
+			zap.String("extension", ext),
+		)
+		return "", dto.ErrInvalidFileType
 	}
 
-	return uploadedPaths, nil
+	newFileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+	storagePath := filepath.Join("uploads", newFileName)
+
+	if err := us.saveUploadedFile(file, storagePath); err != nil {
+		us.logger.Error("Failed to save uploaded file",
+			zap.String("filename", file.Filename),
+			zap.String("path", storagePath),
+			zap.Error(err),
+		)
+		return "", dto.ErrSaveFile
+	}
+
+	return storagePath, nil
 }
 
 func (us *uploadService) saveUploadedFile(file *multipart.FileHeader, savePath string) error {

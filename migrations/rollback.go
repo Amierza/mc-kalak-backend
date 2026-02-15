@@ -7,6 +7,9 @@ import (
 
 func Rollback(db *gorm.DB) error {
 	tables := []interface{}{
+		&entity.PlayerStat{},
+		&entity.Vote{},
+		&entity.Claim{},
 		&entity.User{},
 	}
 

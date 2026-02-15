@@ -2,6 +2,10 @@ package dto
 
 import (
 	"errors"
+
+	"github.com/Amierza/mc-kalak-backend/entity"
+	"github.com/Amierza/mc-kalak-backend/response"
+	"github.com/google/uuid"
 )
 
 const (
@@ -15,7 +19,6 @@ const (
 	MESSAGE_FAILED_TOKEN_NOT_VALID     = "failed token not valid"
 	MESSAGE_FAILED_TOKEN_DENIED_ACCESS = "failed token denied access"
 	MESSAGE_FAILED_GET_CUSTOM_CLAIMS   = "failed get custom claims"
-	MESSAGE_FAILED_GET_ROLE_USER       = "failed get role user"
 
 	// Query Params
 	MESSAGE_INVALID_QUERY_PARAMS = "invalid query params"
@@ -35,6 +38,7 @@ const (
 	FAILED_DELETE         = "failed to delete"
 	FAILED_GET_ALL        = "failed to get all"
 	FAILED_GET_DETAIL     = "failed to get detail"
+	FAILED_GET_PROFILE    = "failed get profile"
 	NOT_FOUND             = "not found"
 	INTERNAL_SERVER_ERROR = "internal server error"
 
@@ -44,18 +48,18 @@ const (
 	MESSAGE_SUCCESS_UPLOAD_FILE  = "success upload file"
 
 	// General Success
-	SUCCESS_LOGIN      = "success login"
-	SUCCESS_CREATE     = "success create"
-	SUCCESS_UPDATE     = "success update"
-	SUCCESS_DELETE     = "success delete"
-	SUCCESS_GET_ALL    = "success get all"
-	SUCCESS_GET_DETAIL = "success get detail"
+	SUCCESS_LOGIN       = "success login"
+	SUCCESS_CREATE      = "success create"
+	SUCCESS_UPDATE      = "success update"
+	SUCCESS_DELETE      = "success delete"
+	SUCCESS_GET_ALL     = "success get all"
+	SUCCESS_GET_DETAIL  = "success get detail"
+	SUCCESS_GET_PROFILE = "success get profile"
 )
 
 var (
 	// Token
-	ErrGenerateAccessToken     = errors.New("failed to generate access token")
-	ErrGenerateRefreshToken    = errors.New("failed to generate refresh token")
+	ErrGenerateToken           = errors.New("failed to generate token")
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 	ErrDecryptToken            = errors.New("failed to decrypt token")
 	ErrTokenInvalid            = errors.New("token invalid")
@@ -80,4 +84,93 @@ var (
 	// Parse
 )
 
-type ()
+// Timestamp
+type (
+	TimestampTemplate struct {
+		CreatedAt string  `json:"created_at"`
+		UpdatedAt string  `json:"updated_at"`
+		DeletedAt *string `json:"deleted_at,omitempty"`
+	}
+)
+
+// Auth
+type (
+	LoginRequest struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	LoginResponse struct {
+		Token string `json:"token"`
+	}
+)
+
+// User
+type (
+	UserResponse struct {
+		ID        uuid.UUID `json:"id"`
+		Username  string    `json:"username"`
+		Password  string    `json:"password"`
+		AvatarURL string    `json:"avatar_url"`
+		IsActive  bool      `json:"is_active"`
+		TimestampTemplate
+	}
+	UpdateProfileRequest struct {
+		AvatarURL string `binding:"required" json:"avatar_url"`
+	}
+	UserSimpleResponse struct {
+		ID        uuid.UUID `json:"id"`
+		Username  string    `json:"username"`
+		AvatarURL string    `json:"avatar_url"`
+	}
+)
+
+// Claim
+type (
+	CreateClaimRequest struct {
+		Event           entity.ClaimEvent `binding:"required,oneof=KING KONG NGOK" json:"event"`
+		MatchDate       string            `binding:"required" json:"match_date"`
+		TotalPlayer     int               `binding:"required,min=2,max=8" json:"total_player"`
+		ScreenshotURL   string            `binding:"required" json:"screenshot_url"`
+		ClaimedPlayerID uuid.UUID         `binding:"required" json:"claimed_player_id"`
+		ReporterID      uuid.UUID         `binding:"required" json:"reporter_id"`
+	}
+	ClaimResponse struct {
+		ID            uuid.UUID          `json:"id"`
+		Event         entity.ClaimEvent  `json:"event"`
+		Status        entity.ClaimStatus `json:"status"`
+		MatchDate     string             `json:"match_date"`
+		TotalPlayer   int                `json:"total_player"`
+		ScreenshotURL string             `json:"screenshot_url"`
+		ApproveCount  int                `json:"approve_count"`
+		RejectCount   int                `json:"reject_count"`
+		ClaimedPlayer UserSimpleResponse `json:"claimed_player"`
+		Reporter      UserSimpleResponse `json:"reporter"`
+		TimestampTemplate
+	}
+	UpdateClaimRequest struct {
+		ID              uuid.UUID         `json:"-"`
+		Event           entity.ClaimEvent `binding:"required,oneof=KING KONG NGOK" json:"event"`
+		MatchDate       string            `binding:"required" json:"match_date"`
+		TotalPlayer     int               `binding:"required,min=2,max=8" json:"total_player"`
+		ScreenshotURL   string            `binding:"required" json:"screenshot_url"`
+		ClaimedPlayerID uuid.UUID         `binding:"required" json:"claimed_player_id"`
+		ReporterID      uuid.UUID         `binding:"required" json:"reporter_id"`
+	}
+	ClaimVoteRequest struct {
+		ID   uuid.UUID `json:"-"`
+		Type string    `binding:"required,oneof=APPROVE REJECT" json:"type"`
+	}
+	ClaimVoteResponse struct {
+		ID    uuid.UUID          `json:"id"`
+		Voter UserSimpleResponse `json:"voter"`
+		Type  entity.VoteType    `json:"type"`
+	}
+	ClaimPaginationResponse struct {
+		response.PaginationResponse
+		Data []*ClaimResponse `json:"data"`
+	}
+	ClaimPaginationRepositoryResponse struct {
+		response.PaginationResponse
+		Claims []*entity.Claim
+	}
+)

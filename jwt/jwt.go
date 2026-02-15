@@ -11,16 +11,13 @@ import (
 
 type (
 	IJWT interface {
-		GenerateToken(userID string, role string, permissions []string) (string, string, error)
+		GenerateToken(userID string) (string, error)
 		ValidateToken(token string) (*jwt.Token, error)
 		GetUserIDByToken(tokenString string) (string, error)
-		GetRoleIDByToken(tokenString string) (string, error)
 	}
 
 	jwtCustomClaim struct {
-		UserID      string   `json:"user_id"`
-		RoleID      string   `json:"role_id"`
-		Permissions []string `json:"endpoints"`
+		UserID string `json:"user_id"`
 		jwt.RegisteredClaims
 	}
 
@@ -46,28 +43,9 @@ func getSecretKey() string {
 	return secretKey
 }
 
-func (j *JWT) GenerateToken(userID string, roleID string, endpoints []string) (string, string, error) {
-	accessClaims := jwtCustomClaim{
+func (j *JWT) GenerateToken(userID string) (string, error) {
+	claims := jwtCustomClaim{
 		userID,
-		roleID,
-		endpoints,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * 300)),
-			Issuer:    j.issuer,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	accessTokenString, err := accessToken.SignedString([]byte(j.secretKey))
-	if err != nil {
-		return "", "", dto.ErrGenerateAccessToken
-	}
-
-	refreshClaims := jwtCustomClaim{
-		userID,
-		roleID,
-		endpoints,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * 3600 * 24 * 7)),
 			Issuer:    j.issuer,
@@ -75,13 +53,13 @@ func (j *JWT) GenerateToken(userID string, roleID string, endpoints []string) (s
 		},
 	}
 
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(j.secretKey))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(j.secretKey))
 	if err != nil {
-		return "", "", dto.ErrGenerateRefreshToken
+		return "", dto.ErrGenerateToken
 	}
 
-	return accessTokenString, refreshTokenString, nil
+	return tokenString, nil
 }
 
 func (j *JWT) parseToken(t_ *jwt.Token) (any, error) {
